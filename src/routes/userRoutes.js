@@ -6,8 +6,10 @@ const router = Router()
 router.post("/register", async (req,res)=>{
     const {nome,email,password}=req.body
     try {
-        const user = {nome,email,password}
-        const newUser = await createUser(user);
+        if(!nome || !email || !password ){
+            return res.status(401).json({message:"preencha todos os campos"})
+        }
+        const newUser = await createUser({nome,email,password});
         res.status(201).json(newUser);
     } catch (error) {
         res.status(400).json({ message: error.message });
