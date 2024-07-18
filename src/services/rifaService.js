@@ -100,6 +100,19 @@ export const comprarBilhetes = async (userId, rifaId, quantidadeBilhetes) => {
 
 export const criarRifa = async (data) => {
     try {
+        // Obter a data atual em UTC, sem considerar hora, minutos, segundos e milissegundos
+        const dataAtual = new Date();
+        dataAtual.setUTCHours(0, 0, 0, 0);
+
+        // Obter a data da rifa em UTC, sem considerar hora, minutos, segundos e milissegundos
+        const dataRifa = new Date(data.data_sorteio);
+        dataRifa.setUTCHours(0, 0, 0, 0);
+
+        // Comparar apenas as datas
+        if (dataRifa.getTime() < dataAtual.getTime()) {
+            throw new Error('A data de sorteio deve ser posterior à data atual');
+        }
+
         const novaRifa = new Rifa(data);
         await novaRifa.save();
         return { success: true, message: 'Rifa criada com sucesso', rifa: novaRifa };
