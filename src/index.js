@@ -9,6 +9,9 @@ app.use(express.json())
 app.use(cors())
 app.use("/api", routerUsers)
 app.use("/api", routerRifa)
+app.use("/", (req,res)=>{
+    return res.status(200).json({ok:true})
+})
 
 
 
