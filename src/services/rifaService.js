@@ -2,45 +2,45 @@ import Rifa from "../models/rifa.js";
 import User from "../models/user.js";
 
 
-/**
- * Função para comprar bilhetes
- * @param {string} userId - ID do usuário
- * @param {string} rifaId - ID da rifa
- * @param {number[]} numeros - Array de números a serem comprados
- * @returns {object} - Objeto com o status da compra e mensagem
- */
+export const criarRifa = async (data) => {
+    try {
+        const novaRifa = new Rifa(data);
+        await novaRifa.save();
+        return { success: true, rifa: novaRifa };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+};  
+
+
+export const listarRifas = async () => {
+    try {
+        const rifas = await Rifa.find()
+            .populate({
+                path: 'numeros_comprados.usuario',  // Nome do campo a ser populado
+                select: 'nome email'  // Campos a serem retornados
+            });
+        return { success: true, rifas };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }  
+};
 
 
 
-// Função auxiliar para gerar números aleatórios únicos
-// Função auxiliar para gerar números aleatórios únicos
-const gerarNumerosAleatorios = (quantidade, max, numerosExistentes) => {
-    const numerosGerados = [];
-    const numeroMaximoDigitos = max.toString().length;
 
-    while (numerosGerados.length < quantidade) {
-        const numeroAleatorio = Math.floor(Math.random() * max) + 1;
-        const numeroComZeros = padZeroes(numeroAleatorio, numeroMaximoDigitos);
-
-        if (!numerosExistentes.includes(numeroComZeros) && !numerosGerados.includes(numeroComZeros)) {
-            numerosGerados.push(numeroComZeros);
+const gerarNumerosAleatorios = (quantidade, totalBilhetes, numerosExistentes) => {
+    const numerosComprados = new Set();
+    while (numerosComprados.size < quantidade) {
+        const numero = Math.floor(Math.random() * totalBilhetes);
+        if (!numerosExistentes.includes(numero.toString()) && !numerosComprados.has(numero.toString())) {
+            numerosComprados.add(numero.toString());
         }
     }
-    return numerosGerados;
+    return Array.from(numerosComprados);
 };
 
-// Função auxiliar para adicionar zeros à esquerda
-const padZeroes = (num, size) => {
-    let s = num.toString();
-    while (s.length < size) {
-        s = "0" + s;
-    }
-    return s;
-};
-
-// Serviço para comprar bilhetes de rifa
 export const comprarBilhetes = async (userId, rifaId, quantidadeBilhetes) => {
-    let numerosComprados; // Definir a variável aqui para ser acessível dentro do bloco try e catch
     try {
         const rifa = await Rifa.findById(rifaId);
         if (!rifa) {
@@ -51,118 +51,56 @@ export const comprarBilhetes = async (userId, rifaId, quantidadeBilhetes) => {
             throw new Error('Rifa já foi sorteada');
         }
 
-        // Verificar se há bilhetes suficientes disponíveis
         if (rifa.bilhetes_vendidos + quantidadeBilhetes > rifa.total_bilhetes) {
             throw new Error('Não há bilhetes suficientes disponíveis');
         }
 
-        // Verificar se o usuário existe e se já comprou bilhetes demais
         const user = await User.findById(userId);
         if (!user) {
             throw new Error('Usuário não encontrado');
         }
 
-        if (user.numeros_comprados.length + quantidadeBilhetes > 2000) {
-            throw new Error('Cada usuário pode comprar no máximo 2.000 bilhetes');
+        // Verificar se o usuário já comprou bilhetes demais
+        const totalBilhetesComprados = user.numeros_comprados.filter(
+            num => num.rifa.toString() === rifaId.toString()
+        ).length;
+
+        if (totalBilhetesComprados + quantidadeBilhetes > 10000) {
+            throw new Error('Cada usuário pode comprar no máximo 10.000 bilhetes');
         }
 
+        // Obter números comprados existentes
+        const numerosExistentes = rifa.numeros_comprados.map(n => n.numero);
+
         // Gerar números aleatórios únicos
-        numerosComprados = gerarNumerosAleatorios(quantidadeBilhetes, rifa.total_bilhetes, rifa.numeros_comprados);
+        const numerosComprados = gerarNumerosAleatorios(quantidadeBilhetes, rifa.total_bilhetes, numerosExistentes);
 
-        // Ordenar os números gerados
-        numerosComprados.sort((a, b) => parseInt(a) - parseInt(b));
-
-        // Atualizar o documento da rifa com os novos números comprados
-        rifa.numeros_comprados.push(...numerosComprados);
+        // Atualizar a rifa com os números comprados
+        numerosComprados.forEach(numero => {
+            rifa.numeros_comprados.push({ numero, usuario: userId });  // Adiciona o usuário
+        });
         rifa.bilhetes_vendidos += quantidadeBilhetes;
         await rifa.save();
 
-        // Ordenar os números comprados pelo usuário antes de salvar
-        user.numeros_comprados.push(...numerosComprados);
-        user.numeros_comprados.sort((a, b) => parseInt(a) - parseInt(b));
+        // Atualizar o usuário com os números comprados
+        numerosComprados.forEach(numero => {
+            user.numeros_comprados.push({ numero, rifa: rifaId });  // Adiciona a rifa
+        });
+        user.numeros_comprados.sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
         await user.save();
 
-        return { success: true, message: 'Bilhetes comprados com sucesso', rifa, user, numerosComprados };
-    } catch (error) {
-        if (error.message === 'Usuário não encontrado' && numerosComprados) {
-            // Remover os números comprados pelo usuário não encontrado
-            const rifa = await Rifa.findById(rifaId);
-            if (rifa) {
-                rifa.numeros_comprados = rifa.numeros_comprados.filter(num => !numerosComprados.includes(num));
-                rifa.bilhetes_vendidos -= quantidadeBilhetes;
-                await rifa.save();
-            }
-        }
-        return { success: false, message: error.message };
-    }
-};
-
-
-export const criarRifa = async (data) => {
-    try {
-        // Obter a data atual em UTC, sem considerar hora, minutos, segundos e milissegundos
-        const dataAtual = new Date();
-        dataAtual.setUTCHours(0, 0, 0, 0);
-
-        // Obter a data da rifa em UTC, sem considerar hora, minutos, segundos e milissegundos
-        const dataRifa = new Date(data.data_sorteio);
-        dataRifa.setUTCHours(0, 0, 0, 0);
-
-        // Comparar apenas as datas
-        if (dataRifa.getTime() < dataAtual.getTime()) {
-            throw new Error('A data de sorteio deve ser posterior à data atual');
-        }
-
-        const novaRifa = new Rifa(data);
-        await novaRifa.save();
-        return { success: true, message: 'Rifa criada com sucesso', rifa: novaRifa };
+        return { success: true, message: 'Bilhetes comprados com sucesso!', rifa, user, numerosComprados };
     } catch (error) {
         return { success: false, message: error.message };
     }
 };
 
-// Serviço para deletar uma rifa
-export const deletarRifa = async (rifaId) => {
+
+export const buscarRifaPorId = async (id) => {
     try {
-        const rifa = await Rifa.findById(rifaId);
+        const rifa = await Rifa.findById(id).populate('numeros_comprados.usuario', 'nome email');
         if (!rifa) {
-            throw new Error('Rifa não encontrada');
-        }
-
-        // Remover números comprados dos usuários
-        await User.updateMany(
-            { numeros_comprados: { $in: rifa.numeros_comprados } },
-            { $pull: { numeros_comprados: { $in: rifa.numeros_comprados } } }
-        );
-
-        // Deletar a rifa
-        await Rifa.findByIdAndDelete(rifaId);
-
-        return { success: true, message: 'Rifa deletada com sucesso' };
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-};
-
-// Serviço para atualizar uma rifa
-export const atualizarRifa = async (rifaId, data) => {
-    try {
-        const rifa = await Rifa.findByIdAndUpdate(rifaId, data, { new: true });
-        if (!rifa) {
-            throw new Error('Rifa não encontrada');
-        }
-        return { success: true, message: 'Rifa atualizada com sucesso', rifa };
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-};
-
-// Serviço para obter uma rifa por ID
-export const obterRifaPorId = async (rifaId) => {
-    try {
-        const rifa = await Rifa.findById(rifaId);
-        if (!rifa) {
-            throw new Error('Rifa não encontrada');
+            return { success: false, message: 'Rifa não encontrada' };
         }
         return { success: true, rifa };
     } catch (error) {
@@ -170,11 +108,15 @@ export const obterRifaPorId = async (rifaId) => {
     }
 };
 
-// Serviço para listar todas as rifas
-export const listarRifas = async () => {
+
+
+export const atualizarRifa = async (id, data) => {
     try {
-        const rifas = await Rifa.find();
-        return { success: true, rifas };
+        const rifaAtualizada = await Rifa.findByIdAndUpdate(id, data, { new: true });
+        if (!rifaAtualizada) {
+            return { success: false, message: 'Rifa não encontrada' };
+        }
+        return { success: true, rifa: rifaAtualizada };
     } catch (error) {
         return { success: false, message: error.message };
     }
@@ -182,29 +124,99 @@ export const listarRifas = async () => {
 
 
 
-export const buscarUsuarioPorBilhete = async (numeroBilhete, rifaId) => {
+export const buscarRifasPorUsuario = async (userId) => {
     try {
-        const rifa = await Rifa.findById(rifaId);
+        // Encontra rifas onde o usuário tem números comprados
+        const rifas = await Rifa.find({ 'numeros_comprados.usuario': userId }).populate('numeros_comprados.usuario', 'nome email');
+        
+        if (!rifas.length) {
+            return { success: false, message: 'Nenhuma rifa encontrada para o usuário' };
+        }
+
+        // Filtra números comprados para incluir apenas os do usuário logado
+        const rifasFiltradas = rifas.map(rifa => {
+            const numerosCompradosUsuario = rifa.numeros_comprados.filter(numero => numero.usuario._id.toString() === userId);
+            console.log(numerosCompradosUsuario)
+            return {
+                ...rifa.toObject(),
+                numeros_comprados: numerosCompradosUsuario
+            };
+        });
+
+        
+
+        return { success: true, rifas: rifasFiltradas };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+};
+
+
+export const buscarGanhadorDaRifa = async (rifaId) => {
+    try {
+        // Buscar a rifa pelo ID
+        const rifa = await Rifa.findById(rifaId).populate('numeros_comprados.usuario', 'nome email');
         if (!rifa) {
-            throw new Error('Rifa não encontrada');
+            return { success: false, message: 'Rifa não encontrada' };
         }
 
-        // Verificar se o número do bilhete está entre os bilhetes vendidos
-        const numeroComZeros = padZeroes(numeroBilhete, rifa.total_bilhetes.toString().length);
-        if (!rifa.numeros_comprados.includes(numeroComZeros)) {
-            return { success: true, message: 'Número não comprado' };
+        // Verificar se a rifa foi sorteada e tem um ganhador
+        if (!rifa.sorteada) {
+            return { success: false, message: 'A rifa ainda não foi sorteada' };
         }
 
-        // Encontrar o usuário que comprou o bilhete
-        const user = await User.findOne({ numeros_comprados: numeroComZeros });
-        if (!user) {
-            throw new Error('Usuário não encontrado');
+        if (!rifa.ganhador) {
+            return { success: false, message: 'Nenhum ganhador encontrado para esta rifa' };
         }
 
-        return { success: true, message: 'Usuário encontrado', user };
+        // Encontrar o número comprado pelo ganhador
+        const ganhadorNumero = rifa.numeros_comprados.find(n => n.numero === rifa.numeroSorteado);
+        if (!ganhadorNumero) {
+            return { success: false, message: 'Número sorteado não encontrado nos números comprados' };
+        }
+
+        // Obter as informações do usuário ganhador
+        const ganhador = ganhadorNumero.usuario;
+
+        return { success: true, ganhador, numeroSorteado: rifa.numeroSorteado };
     } catch (error) {
         return { success: false, message: error.message };
     }
 };
 
 
+export const deletarRifa = async (id) => {
+    try {
+        // Encontrar e remover a rifa pelo ID
+        const rifa = await Rifa.findByIdAndDelete(id);
+        if (!rifa) {
+            return { success: false, message: 'Rifa não encontrada' };
+        }
+        return { success: true, message: 'Rifa deletada com sucesso' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+};
+
+export const deletarNumerosCompradosPorRifa = async (rifaId) => {
+    try {
+        // Encontrar todos os usuários que compraram números da rifa
+        const usuarios = await User.find({ 'numeros_comprados.rifa': rifaId });
+
+        if (usuarios.length === 0) {
+            return { success: true, message: 'Nenhum número comprado encontrado para esta rifa' };
+        }
+
+        // Atualizar cada usuário para remover os números comprados relacionados à rifa
+        for (const usuario of usuarios) {
+            usuario.numeros_comprados = usuario.numeros_comprados.filter(
+                num => num.rifa.toString() !== rifaId.toString()
+            );
+            await usuario.save();
+        }
+
+        return { success: true, message: 'Números comprados removidos com sucesso' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+};

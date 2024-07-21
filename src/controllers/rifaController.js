@@ -1,89 +1,122 @@
-import { comprarBilhetes, criarRifa,deletarRifa,
+import {criarRifa, listarRifas,
+    buscarRifaPorId,
+    comprarBilhetes,
     atualizarRifa,
-    obterRifaPorId,
-    listarRifas, 
-    buscarUsuarioPorBilhete} from "../services/rifaService.js";
+    buscarRifasPorUsuario,
+    buscarGanhadorDaRifa,
+    deletarRifa,
+    deletarNumerosCompradosPorRifa} from "../services/rifaService.js"
 
-export const comprarBilhetesController = async (req, res) => {
-    const { rifaId, quantidadeBilhetes } = req.body;
 
-   const userId= req.userId
-   console.log(userId)
+    export const criarRifaController = async (req,res)=>{
+        try {
+            const data = req.body;
+            const resultado = await criarRifa(data);
+          return res.status(201).json({resultado, message:"rifa Criada com sucesso"})
+        } catch (error) {
+            return res.status(500).json({"error":error.message})
+        }
+    }
 
-  if(quantidadeBilhetes <=0){
-    return res.status(403).json({message:"coloque um valor maior que zero"})
-  }
 
-    const result = await comprarBilhetes(userId, rifaId, quantidadeBilhetes);
-    if (result.success) {
-        res.status(200).json(result);
+
+    export const listasRifasController = async (req,res)=>{
+        try {
+            const resultado = await listarRifas();
+          return res.status(200).json(resultado)
+        } catch (error) {
+            return res.status(500).json({"error":error.message})
+        }
+    }
+
+
+    export const listasRifaByIdController = async (req,res)=>{
+        const { id } = req.params;
+        try {
+            const resultado = await buscarRifaPorId(id);
+          return res.status(200).json(resultado)
+        } catch (error) {
+            return res.status(500).json({"error":error.message})
+        }
+    }
+
+
+
+    export const comprarBilhetesController = async (req, res) => {
+        const { userId } = req; // Obtendo o ID do usuário da requisição
+        const { rifaId, quantidadeBilhetes } = req.body; // Obtendo o ID da rifa e a quantidade de bilhetes do corpo da requisição
+    
+        try {
+            // Validação básica
+            if (!userId || !rifaId || !quantidadeBilhetes) {
+                return res.status(400).json({ error: 'Parâmetros insuficientes.' });
+            }
+    
+            if (isNaN(quantidadeBilhetes) || quantidadeBilhetes <= 0) {
+                return res.status(400).json({ error: 'Quantidade de bilhetes inválida.' });
+            }
+    
+            // Chama o serviço para comprar os bilhetes
+            const resultado = await comprarBilhetes(userId, rifaId, quantidadeBilhetes);
+    
+            if (resultado.success) {
+                return res.status(200).json({ resultado, message: 'Bilhetes comprados com sucesso!' });
+            } else {
+                return res.status(400).json({ error: resultado.message });
+            }
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        }
+    };
+
+
+
+    export const atualizarRifaController = async (req,res)=>{
+        const { id } = req.params;
+        const data = req.body;
+        try {
+            const resultado =  await atualizarRifa(id, data);
+          return res.status(200).json({resultado, message:"rifa atualizada com sucesso!"})
+        } catch (error) {
+            return res.status(500).json({"error":error.message})
+        }
+    }
+
+    
+
+    export const buscarRifasDeUsuarioController = async (req, res) => {
+        const { userId } = req; // Obtendo o ID do usuário da requisição
+    
+        try {
+            const resultado = await buscarRifasPorUsuario(userId);
+            return res.status(200).json(resultado);
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        }
+    };
+
+
+    export const buscarGanhadorController = async (req, res) => {
+        const { id } = req.params;
+    const resultado = await buscarGanhadorDaRifa(id);
+    if (resultado.success) {
+        return res.status(200).json(resultado);
     } else {
-        res.status(400).json(result);
-    }
-};
+        return res.status(404).json(resultado);
+    } 
+    };
 
 
-export const criarRifaController = async (req, res) => {
-    const result = await criarRifa(req.body);
-    if (result.success) {
-        res.status(201).json(result);
+
+    export const deletarRifaController = async (req, res) => {
+        const { id } = req.params;
+    const resultado = await deletarRifa(id)
+
+const rifaDeletada = await deletarNumerosCompradosPorRifa(id )
+console.log(rifaDeletada)
+    if (resultado.success) {
+        return res.status(200).json(resultado);
     } else {
-        res.status(400).json(result);
-    }
-};
-
-// Controller para deletar uma rifa
-export const deletarRifaController = async (req, res) => {
-    const { rifaId } = req.params;
-    const result = await deletarRifa(rifaId);
-    if (result.success) {
-        res.status(200).json(result);
-    } else {
-        res.status(400).json(result);
-    }
-};
-
-// Controller para atualizar uma rifa
-export const atualizarRifaController = async (req, res) => {
-    const { rifaId } = req.params;
-    const result = await atualizarRifa(rifaId, req.body);
-    if (result.success) {
-        res.status(200).json(result);
-    } else {
-        res.status(400).json(result);
-    }
-};
-
-// Controller para obter uma rifa por ID
-export const obterRifaPorIdController = async (req, res) => {
-    const { rifaId } = req.params;
-    const result = await obterRifaPorId(rifaId);
-    if (result.success) {
-        res.status(200).json(result);
-    } else {
-        res.status(400).json(result);
-    }
-};
-
-// Controller para listar todas as rifas
-export const listarRifasController = async (req, res) => {
-    const result = await listarRifas();
-    if (result.success) {
-        res.status(200).json(result);
-    } else {
-        res.status(400).json(result);
-    }
-};
-
-
-
-export const buscarUsuarioPorBilheteController = async(req,res)=>{
-    const {numeroBilhete, rifaId} = req.body
-    try {
-       
-       const result = await buscarUsuarioPorBilhete(numeroBilhete, rifaId)
-       return res.status(200).json(result)
-    } catch (error) {
-        return res.status(500).json({message:error})
-    }
-}
+        return res.status(404).json(resultado);
+    } 
+    };

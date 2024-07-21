@@ -21,6 +21,15 @@ export const createUser = async (userData) => {
     return { user: newUser, token};
 };
 
+export const getUserById = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        return user;
+    } catch (error) {
+        console.error('Error finding user by ID:', error);
+        throw error;
+    }
+};
 
 export const loginUser = async (email, password) => {
     const user = await User.findOne({ email });
@@ -37,6 +46,9 @@ export const loginUser = async (email, password) => {
 
     return { userId: user._id, userNome:user.nome, isAdmin:user.isAdmin, token, tokenExpiration: 1 };
 };
+
+
+
 
 
 

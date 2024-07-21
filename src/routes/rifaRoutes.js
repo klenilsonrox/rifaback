@@ -1,23 +1,18 @@
 import { Router } from "express";
-import { criarRifaController,deletarRifaController,
-    atualizarRifaController,
-    obterRifaPorIdController,
-    listarRifasController,comprarBilhetesController, 
-    buscarUsuarioPorBilheteController} from "../controllers/rifaController.js";
+import { atualizarRifaController, buscarGanhadorController, buscarRifasDeUsuarioController, comprarBilhetesController, criarRifaController, deletarRifaController, listasRifaByIdController, listasRifasController } from "../controllers/rifaController.js";
 import { isAuthenticated } from "../middlewares/authenticate.js";
 import { isAdmin } from "../middlewares/verifyAdmin.js";
-import { mostrarUser } from "../middlewares/listarUser.js";
-
-const routerRifa= Router()
-
-routerRifa.post('/rifa/comprar', isAuthenticated, comprarBilhetesController);
-routerRifa.post('/rifa', isAuthenticated,isAdmin, criarRifaController);
-routerRifa.delete('/rifa/:rifaId', isAuthenticated,isAdmin,deletarRifaController);
-routerRifa.put('/rifa/:rifaId',isAuthenticated,isAdmin, atualizarRifaController);
-routerRifa.get('/rifa/:rifaId', obterRifaPorIdController);
-routerRifa.get('/rifa', mostrarUser, listarRifasController);
-routerRifa.post('/rifa/ganhador',isAuthenticated,isAdmin, buscarUsuarioPorBilheteController);
 
 
-export default routerRifa
+const routerRifas = Router()
 
+routerRifas.get("/rifas", listasRifasController)
+routerRifas.post("/rifas", isAuthenticated, isAdmin, criarRifaController)
+routerRifas.get("/rifas/:id", listasRifaByIdController)
+routerRifas.post("/rifas/comprar", isAuthenticated, comprarBilhetesController)
+routerRifas.put("/rifas/:id", isAuthenticated,isAdmin, atualizarRifaController)
+routerRifas.get("/rifas/usuario/:userId", isAuthenticated, buscarRifasDeUsuarioController)
+routerRifas.get("/rifas/:id/ganhador", isAuthenticated, buscarGanhadorController)
+routerRifas.delete("/rifas/:id", isAuthenticated, deletarRifaController)
+
+export default routerRifas
