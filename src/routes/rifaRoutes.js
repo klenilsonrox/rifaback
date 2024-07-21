@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { atualizarRifaController, buscarGanhadorController, buscarRifasDeUsuarioController, comprarBilhetesController, criarRifaController, deletarRifaController, listasRifaByIdController, listasRifasController } from "../controllers/rifaController.js";
+import { atualizarRifaController, buscarGanhadorController, buscarRifasDeUsuarioController, comprarBilhetesController, criarRifaController, deletarRifaController, getUserByNumber, listasRifaByIdController, listasRifasController } from "../controllers/rifaController.js";
 import { isAuthenticated } from "../middlewares/authenticate.js";
 import { isAdmin } from "../middlewares/verifyAdmin.js";
 
@@ -12,7 +12,7 @@ routerRifas.get("/rifas/:id", listasRifaByIdController)
 routerRifas.post("/rifas/comprar", isAuthenticated, comprarBilhetesController)
 routerRifas.put("/rifas/:id", isAuthenticated,isAdmin, atualizarRifaController)
 routerRifas.get("/rifas/usuario/:userId", isAuthenticated, buscarRifasDeUsuarioController)
-routerRifas.get("/rifas/:id/ganhador", isAuthenticated, buscarGanhadorController)
+routerRifas.get('/rifas/:rifaId/numero/:number', getUserByNumber);
 routerRifas.delete("/rifas/:id", isAuthenticated, deletarRifaController)
 
 export default routerRifas

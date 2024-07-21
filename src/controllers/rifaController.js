@@ -5,7 +5,8 @@ import {criarRifa, listarRifas,
     buscarRifasPorUsuario,
     buscarGanhadorDaRifa,
     deletarRifa,
-    deletarNumerosCompradosPorRifa} from "../services/rifaService.js"
+    deletarNumerosCompradosPorRifa,
+    findUserByNumber} from "../services/rifaService.js"
 
 
     export const criarRifaController = async (req,res)=>{
@@ -100,7 +101,7 @@ import {criarRifa, listarRifas,
         const { id } = req.params;
     const resultado = await buscarGanhadorDaRifa(id);
     if (resultado.success) {
-        return res.status(200).json(resultado);
+        return res.status(200).json({resultado, message:"ok"});
     } else {
         return res.status(404).json(resultado);
     } 
@@ -119,4 +120,16 @@ console.log(rifaDeletada)
     } else {
         return res.status(404).json(resultado);
     } 
+    };
+
+
+    export const getUserByNumber = async (req, res) => {
+        const { rifaId, number } = req.params;
+    console.log(rifaId,number)
+        try {
+            const user = await findUserByNumber(rifaId, number);
+            res.status(200).json(user);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
     };

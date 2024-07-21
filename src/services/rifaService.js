@@ -220,3 +220,31 @@ export const deletarNumerosCompradosPorRifa = async (rifaId) => {
         return { success: false, message: error.message };
     }
 };
+
+
+export const findUserByNumber = async (rifaId, number) => {
+    try {
+        const rifa = await Rifa.findById(rifaId).populate('numeros_comprados.usuario', 'nome email');
+
+        if (!rifa) {
+            throw new Error('Rifa not found');
+        }
+
+        // if (!rifa.sorteada) {
+        //     throw new Error('Essa Rifa ainda nao foi sorteada');
+        // }
+
+        const numeroComprado = rifa.numeros_comprados.find(num => num.numero === number);
+
+        if (!numeroComprado) {
+            throw new Error('Este número nao foi comprado');
+        }
+
+        const user = numeroComprado.usuario
+        const status = 200
+
+        return {user,status};
+    } catch (error) {
+        throw new Error(error.message);
+    }
+};
