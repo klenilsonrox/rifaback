@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createUser, getUserById, loginUser } from "../services/userService.js";
+import { createUser, getUserById, loginUser, requestPasswordReset, resetPassword } from "../services/userService.js";
 import { isAuthenticated } from "../middlewares/authenticate.js";
 
 
@@ -40,6 +40,26 @@ router.get('/me', isAuthenticated, async (req, res) => {
     }
 });
 
+router.post('/request-password-reset', async (req, res) => {
+    const { email } = req.body;
+    try {
+        await requestPasswordReset(email);
+        res.status(200).json({ message: 'E-mail de recuperação enviado' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+  
+
+router.post('/reset-password', async (req, res) => {
+    const { token, newPassword } = req.body;
+    try {
+        await resetPassword(token, newPassword);
+        res.status(200).json({ message: 'Senha redefinida com sucesso' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
 
 export default router
