@@ -19,7 +19,7 @@ const sendResetEmail = async (email, token) => {
         from: process.env.EMAIL,
         to: email,
         subject: 'Redefinição de Senha',
-        text: `Clique no link abaixo para redefinir sua senha:\n\nhttp://localhost:3000/reset-password/${token}`,
+        text: `Clique no link abaixo para redefinir sua senha:\n\nhttps://rxcampanhas.vercel.app/reset-password/${token}`,
     };
 
     try {
