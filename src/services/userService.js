@@ -16,9 +16,9 @@ const transponder = nodemailer.createTransport({
 // Função para enviar e-mail
 const sendResetEmail = async (email, token) => {
     const mailOptions = {
-        from: process.env.EMAIL,
+        from: `RxCampanhas | ${process.env.EMAIL}`,
         to: email,
-        subject: 'Redefinição de Senha',
+        subject: 'Hora de recuperar sua senha',
         text: `Clique no link abaixo para redefinir sua senha:\n\nhttps://rxcampanhas.vercel.app/reset-password/${token}`,
     };
 
