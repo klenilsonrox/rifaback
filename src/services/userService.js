@@ -19,7 +19,14 @@ const sendResetEmail = async (email, token) => {
         from: `RxCampanhas | ${process.env.EMAIL}`,
         to: email,
         subject: 'Hora de recuperar sua senha',
-        text: `Clique no link abaixo para redefinir sua senha:\n\nhttps://rxcampanhas.vercel.app/reset-password/${token}`,
+        html: `
+        <p>Clique no BOTAO abaixo para redefinir sua senha:</p>
+        <a href="https://rxcampanhas.vercel.app/reset-password/${token}" style="text-decoration: none;">
+            <button style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor:pointer;">
+                Redefinir Senha
+            </button>
+        </a>
+    `,
     };
 
     try {
